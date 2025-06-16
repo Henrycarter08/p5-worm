@@ -3,6 +3,9 @@ let food;
 let obstacles = [];
 let gridSize = 20;
 let cols, rows;
+let gameOver = false;
+let score = 0;            // <-- New
+let highScore = 0;        // <-- New
 
 function setup() {
     createCanvas(windowWidth, windowHeight);
@@ -10,15 +13,13 @@ function setup() {
     calculateGrid();
     snake = new Snake();
     food = createFood();
-    generateObstacles(30); // Number of obstacles
+    generateObstacles(30);
 }
 
 function windowResized() {
     resizeCanvas(windowWidth, windowHeight);
     calculateGrid();
-    snake.reset();
-    food = createFood();
-    generateObstacles(30);
+    restartGame();
 }
 
 function calculateGrid() {
@@ -28,6 +29,11 @@ function calculateGrid() {
 
 function draw() {
     background(51);
+
+    if (gameOver) {
+        showGameOver();
+        return;
+    }
 
     // Draw obstacles
     fill(200, 100, 0);
@@ -39,14 +45,27 @@ function draw() {
     snake.show();
 
     if (snake.eat(food)) {
+        score += 10;               // <-- New
         food = createFood();
     }
 
     fill(255, 0, 100);
     rect(food.x, food.y, gridSize, gridSize);
+
+    // Draw score
+    fill(255);
+    textSize(20);
+    textAlign(LEFT, TOP);
+    text(`Score: ${score}`, 10, 10);             // <-- New
+    text(`High Score: ${highScore}`, 10, 35);    // <-- New
 }
 
 function keyPressed() {
+    if (gameOver) {
+        restartGame();
+        return;
+    }
+
     if (keyCode === UP_ARROW && snake.ydir !== 1) {
         snake.setDir(0, -1);
     } else if (keyCode === DOWN_ARROW && snake.ydir !== -1) {
@@ -56,6 +75,26 @@ function keyPressed() {
     } else if (keyCode === RIGHT_ARROW && snake.xdir !== -1) {
         snake.setDir(1, 0);
     }
+}
+
+function showGameOver() {
+    fill(0, 0, 0, 150);
+    rect(0, 0, width, height);
+    textAlign(CENTER, CENTER);
+    fill(255);
+    textSize(48);
+    text("💀 GAME OVER 💀", width / 2, height / 2 - 40);
+    textSize(24);
+    text("Press any key to restart", width / 2, height / 2 + 20);
+}
+
+function restartGame() {
+    if (score > highScore) highScore = score;  // <-- New
+    score = 0;                                 // <-- New
+    gameOver = false;
+    snake.reset();
+    food = createFood();
+    generateObstacles(30);
 }
 
 function createFood() {
@@ -82,7 +121,6 @@ function generateObstacles(count) {
 }
 
 function isOccupied(pos) {
-    // Check if position overlaps with the snake or food or existing obstacles
     for (let s of snake.body) {
         if (s.x === pos.x && s.y === pos.y) return true;
     }
@@ -117,24 +155,21 @@ class Snake {
         head.x += this.xdir * gridSize;
         head.y += this.ydir * gridSize;
 
-        // Collision with self
         for (let i = 0; i < this.body.length - 1; i++) {
             if (head.x === this.body[i].x && head.y === this.body[i].y) {
-                this.reset();
+                gameOver = true;
                 return;
             }
         }
 
-        // Collision with walls
         if (head.x < 0 || head.x >= width || head.y < 0 || head.y >= height) {
-            this.reset();
+            gameOver = true;
             return;
         }
 
-        // Collision with obstacles
         for (let o of obstacles) {
             if (head.x === o.x && head.y === o.y) {
-                this.reset();
+                gameOver = true;
                 return;
             }
         }
